@@ -218,6 +218,14 @@ export namespace ce_core {
     | { "type": "Mismatch", reason: string }
     | { "type": "TimeOut" };
 }
+export namespace ce_petrinet {
+  export type Input = {
+    commands: string
+  };
+  export type Output = {
+    result: string
+  };
+}
 export namespace ce_playground {
   export type Input = {
     text: string
@@ -234,7 +242,8 @@ export namespace ce_shell {
     | { "analysis": "Parser", "io": { input: Parser.Input, output: Parser.Output, meta: void } }
     | { "analysis": "Playground", "io": { input: ce_playground.Input, output: ce_playground.Output, meta: void } }
     | { "analysis": "Security", "io": { input: SecurityAnalysis.Input, output: SecurityAnalysis.Output, meta: SecurityAnalysis.Meta } }
-    | { "analysis": "Sign", "io": { input: SignAnalysis.Input, output: SignAnalysis.Output, meta: GCL.TargetDef[] } };
+    | { "analysis": "Sign", "io": { input: SignAnalysis.Input, output: SignAnalysis.Output, meta: GCL.TargetDef[] } }
+    | { "analysis": "Petrinet", "io": { input: ce_petrinet.Input, output: ce_petrinet.Output, meta: void } };
   export type Analysis =
     | "Calculator"
     | "Compiler"
@@ -242,8 +251,9 @@ export namespace ce_shell {
     | "Parser"
     | "Playground"
     | "Security"
-    | "Sign";
-  export const ANALYSIS: Analysis[] = ["Calculator", "Compiler", "Interpreter", "Parser", "Playground", "Security", "Sign"];
+    | "Sign"
+    | "Petrinet";
+  export const ANALYSIS: Analysis[] = ["Calculator", "Compiler", "Interpreter", "Parser", "Playground", "Security", "Sign", "Petrinet"];
   export namespace io {
     export type Input = {
       analysis: ce_shell.Analysis,
@@ -346,11 +356,6 @@ export namespace inspectify {
     }
   }
   export namespace endpoints {
-    export type ReferenceExecution = {
-      meta: ce_shell.io.Meta,
-      output: (ce_shell.io.Output | null),
-      error: (string | null)
-    };
     export type GenerateParams = {
       analysis: ce_shell.Analysis,
       seed: (number | null)
@@ -358,6 +363,11 @@ export namespace inspectify {
     export type PublicEvent =
       | { "type": "Reset" }
       | { "type": "StateChanged", "value": inspectify.checko.scoreboard.PublicState };
+    export type ReferenceExecution = {
+      meta: ce_shell.io.Meta,
+      output: (ce_shell.io.Output | null),
+      error: (string | null)
+    };
     export type Event =
       | { "type": "Reset" }
       | { "type": "CompilationStatus", "value": { status: inspectify.endpoints.CompilationStatus } }
@@ -365,9 +375,6 @@ export namespace inspectify {
       | { "type": "JobsChanged", "value": { jobs: driver.job.JobId[] } }
       | { "type": "GroupsConfig", "value": { config: inspectify.checko.config.GroupsConfig } }
       | { "type": "ProgramsConfig", "value": { programs: inspectify.endpoints.Program[] } };
-    export type AnalysisExecution = {
-      id: driver.job.JobId
-    };
     export type CompilationStatus = {
       id: (driver.job.JobId | null),
       state: driver.job.JobState,
@@ -381,6 +388,9 @@ export namespace inspectify {
       stdout: string,
       spans: inspectify.endpoints.Span[],
       analysis_data: (inspectify.endpoints.AnalysisData | null)
+    };
+    export type AnalysisExecution = {
+      id: driver.job.JobId
     };
     export type Program = {
       hash: ce_shell.io.Hash,

@@ -5,7 +5,7 @@ define_env!(PlaygroundEnv);
 
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Input {
-    pub text: String,                   
+    pub text: String,
 }
 
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]

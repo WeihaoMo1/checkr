@@ -38,6 +38,7 @@ ce-core = { path = "./crates/ce-core" }
 ce-interpreter = { path = "./crates/envs/ce-interpreter" }
 ce-parser = { path = "./crates/envs/ce-parser" }
 ce-playground = { path = "./crates/envs/ce-playground" }
+ce-petrinet = { path = "./crates/envs/ce-petrinet" }
 ce-security = { path = "./crates/envs/ce-security" }
 ce-shell = { path = "./crates/ce-shell" }
 ce-sign = { path = "./crates/envs/ce-sign" }

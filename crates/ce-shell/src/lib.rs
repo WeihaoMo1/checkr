@@ -21,6 +21,7 @@ define_shell!(
     ce_playground::PlaygroundEnv[Playground, "Playground"],
     ce_security::SecurityEnv[Security, "Security"],
     ce_sign::SignEnv[Sign, "Sign Analysis"],
+    ce_petrinet::PetrinetEnv[Petrinet, "Petrinet"],
 );
 
 impl Analysis {

@@ -388,6 +388,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ce-petrinet"
+version = "0.2.14"
+dependencies = [
+ "ce-core",
+ "gcl",
+ "itertools 0.14.0",
+ "serde",
+ "serde_json",
+ "stdx",
+ "tapi",
+ "tracing",
+]
+
+[[package]]
 name = "ce-playground"
 version = "0.2.14"
 dependencies = [
@@ -422,6 +436,7 @@ dependencies = [
  "ce-core",
  "ce-interpreter",
  "ce-parser",
+ "ce-petrinet",
  "ce-playground",
  "ce-security",
  "ce-sign",

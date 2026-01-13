@@ -3,3 +3,4 @@
 inspectify-binaries/
 .env
 /z3-versions
+/apps/inspectify/src/lib/api.ts
