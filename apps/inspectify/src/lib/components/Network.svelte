@@ -41,6 +41,21 @@
           shape: 'circle',
           size: 30,
         },
+        groups: {
+          transition: {
+            color: {
+              background: mirage.ui.fg.hex(),
+              border: mirage.ui.fg.hex(),
+              highlight: mirage.ui.fg.brighten(1).hex(),
+            },
+            font: {
+              color: 'white',
+            },
+            borderWidth: 1,
+            shape: 'box',
+            size: 30,
+          },
+        },
         edges: {
           // color: '#D0D0FF',
           color: mirage.syntax.constant.hex(),

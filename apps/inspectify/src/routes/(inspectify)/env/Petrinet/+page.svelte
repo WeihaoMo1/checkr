@@ -11,11 +11,11 @@
   {#snippet inputView()}
     <StandardInput analysis="Petrinet" code="commands" {io} />
   {/snippet}
-<!--   {#snippet outputView({ output, referenceOutput })}
+  <!-- {#snippet outputView({ output, referenceOutput })}
     <div class="relative">
       <div class="absolute inset-0 grid">
         <pre class="p-2"><code
-            >{#if output}{output.result}{/if}</code
+            >{#if output}{output.dot}{/if}</code
           ></pre>
       </div>
     </div>
@@ -23,7 +23,7 @@
   {#snippet outputView({ output })}
     <div class="relative">
       <div class="absolute inset-0 grid overflow-auto">
-        <Network dot={ output.dot} />
+        <Network dot={output.dot} />
       </div>
     </div>
   {/snippet}
