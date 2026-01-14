@@ -223,7 +223,7 @@ export namespace ce_petrinet {
     commands: string
   };
   export type Output = {
-    result: string
+    dot: string
   };
 }
 export namespace ce_playground {

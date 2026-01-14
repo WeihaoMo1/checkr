@@ -19,8 +19,8 @@ impl ParseError {
     }
 }
 
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,7 +38,6 @@ pub enum PCommand {
     Connection(String, String),
     Token(String, usize),
 }
-
 
 impl Display for PCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -59,17 +58,29 @@ impl Display for PCommands {
 }
 
 pub fn parse_pcommands(src: &str) -> Result<PCommands, ParseError> {
+    let trimmed = src.trim();
+
+    if !trimmed.ends_with(';') {
+        return Err(ParseError::new(format!("Invalid command: '{trimmed}'")));
+    }
+
     let mut pcmds = Vec::new();
 
-    src.split(';')
+    trimmed
+        .split(';')
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .try_for_each(|pcmd| {
             if let Some((a, b)) = pcmd.split_once("->") {
                 let a = a.trim();
                 let b = b.trim();
-                if a.is_empty() || b.is_empty() {
+                if a.is_empty() || b.is_empty() || a.contains("->") || b.contains("->") {
                     return Err(ParseError::new(format!("Invalid connection: '{pcmd}'")));
+                }
+                if a.contains("*") || b.contains("*") {
+                    return Err(ParseError::new(format!(
+                        "Invalid connection syntax: '{pcmd}'"
+                    )));
                 }
                 pcmds.push(PCommand::Connection(a.to_string(), b.to_string()));
                 return Ok(());
@@ -86,7 +97,7 @@ pub fn parse_pcommands(src: &str) -> Result<PCommands, ParseError> {
                     if !stars.chars().all(|c| c == '*') {
                         return Err(ParseError::new(format!("Invalid token syntax: '{pcmd}")));
                     }
-                    pcmds.push(PCommand::Token((place), (stars.len())));
+                    pcmds.push(PCommand::Token(place, stars.len()));
                     return Ok(());
                 }
             }
@@ -109,7 +120,27 @@ pub struct Input {
 
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Output {
-    pub result: String,
+    pub dot: String,
+}
+
+pub fn dot(pcmds: PCommands) -> String {
+    let mut lines = String::new();
+    for pcmd in &pcmds.0 {
+        match pcmd {
+            PCommand::Connection(a, b) => {
+                lines.push_str(&format!(
+                    "  {a:?}[label=\"{a}\"]; {a:?} -> {b:?}; {b:?}[label=\"{b}\"];\n"
+                ));
+            }
+            PCommand::Token(place, n) => {
+                lines = lines.replace(
+                    &format!("[label=\"{place}\"]"),
+                    &format!("[label=\"{place}{}\"]", "*".repeat(*n)),
+                );
+            }
+        }
+    }
+    format!("digraph G {{\n{}}}", lines)
 }
 
 impl Env for PetrinetEnv {
@@ -128,9 +159,7 @@ impl Env for PetrinetEnv {
                     "failed to parse commands",
                 ))?;
 
-        let result = parsed.to_string();
-
-        Ok(Output { result })
+        Ok(Output { dot: dot(parsed) })
     }
 
     fn validate(_input: &Self::Input, _output: &Self::Output) -> ce_core::Result<ValidationResult> {
