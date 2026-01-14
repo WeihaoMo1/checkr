@@ -35,14 +35,14 @@ pub struct PCommands(pub Vec<PCommand>);
 
 #[derive(tapi::Tapi, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PCommand {
-    Connection(String, String),
+    Connection(String, String, String),
     Token(String, usize),
 }
 
 impl Display for PCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PCommand::Connection(from, to) => write!(f, "{from} -> {to};"),
+            PCommand::Connection(from, to, transition) => write!(f, "{from} -> {to} [{transition}];"),
             PCommand::Token(place, n) => write!(f, "{place}{stars};", stars = "*".repeat(*n)),
         }
     }
@@ -71,9 +71,25 @@ pub fn parse_pcommands(src: &str) -> Result<PCommands, ParseError> {
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .try_for_each(|pcmd| {
-            if let Some((a, b)) = pcmd.split_once("->") {
+            if let Some((a, rest)) = pcmd.split_once("->") {
                 let a = a.trim();
+
+                let (b, bracket_part) = rest.trim()
+                    .rsplit_once('[')
+                    .ok_or_else(|| {
+                        ParseError::new(format!("Expected '[]' after target: '{pcmd}'"))
+                    })?;
+
                 let b = b.trim();
+
+                let t = bracket_part
+                    .strip_suffix(']')
+                    .ok_or_else(|| {
+                        ParseError::new(format!("Unclosed bracket in: '{pcmd}'"))
+                    })?
+                    .trim();
+
+                
                 if a.is_empty() || b.is_empty() || a.contains("->") || b.contains("->") {
                     return Err(ParseError::new(format!("Invalid connection: '{pcmd}'")));
                 }
@@ -82,7 +98,8 @@ pub fn parse_pcommands(src: &str) -> Result<PCommands, ParseError> {
                         "Invalid connection syntax: '{pcmd}'"
                     )));
                 }
-                pcmds.push(PCommand::Connection(a.to_string(), b.to_string()));
+
+                pcmds.push(PCommand::Connection(a.to_string(), b.to_string(), t.to_string()));
                 return Ok(());
             }
 
@@ -127,9 +144,9 @@ pub fn dot(pcmds: PCommands) -> String {
     let mut lines = String::new();
     for pcmd in &pcmds.0 {
         match pcmd {
-            PCommand::Connection(a, b) => {
+            PCommand::Connection(a, b, t) => {
                 lines.push_str(&format!(
-                    "  {a:?}[label=\"{a}\"]; {a:?} -> {b:?}; {b:?}[label=\"{b}\"];\n"
+                    "  {a:?}[label=\"{a}\"]; {a:?} -> {b:?} [label=\"{t}\"]; {b:?}[label=\"{b}\"];\n"
                 ));
             }
             PCommand::Token(place, n) => {
