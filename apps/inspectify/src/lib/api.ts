@@ -220,7 +220,8 @@ export namespace ce_core {
 }
 export namespace ce_petrinet {
   export type Input = {
-    commands: string
+    commands: string,
+    steps: number
   };
   export type Output = {
     dot: string

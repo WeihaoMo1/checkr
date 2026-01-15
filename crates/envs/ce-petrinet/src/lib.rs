@@ -14,6 +14,9 @@ use parser::parse_pcommands;
 mod dot_generator;
 use dot_generator::dot;
 
+mod steps;
+use steps::steps;
+
 define_env!(PetrinetEnv);
 
 #[derive(Debug, Clone)]
@@ -95,6 +98,7 @@ impl FromStr for PCommands {
 #[derive(tapi::Tapi, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Input {
     pub commands: Stringify<PCommands>,
+    pub steps: usize,
 }
 
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -116,7 +120,9 @@ impl Env for PetrinetEnv {
                     "failed to parse commands",
                 ))?;
 
-        let dot_str = dot(parsed).map_err(ce_core::EnvError::invalid_input_for_program(
+        let steps = steps(parsed, input.steps);
+
+        let dot_str = dot(steps).map_err(ce_core::EnvError::invalid_input_for_program(
             "failed to generate DOT",
         ))?;
 
@@ -211,6 +217,7 @@ impl Generate for Input {
 
         Self {
             commands: Stringify::new(PCommands(commands)),
+            steps: 0,
         }
     }
 }
