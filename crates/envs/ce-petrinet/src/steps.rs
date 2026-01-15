@@ -42,13 +42,19 @@ pub fn steps(pcmds: PCommands, steps: usize) -> PCommands {
         }
 
         let mut fire_places: Vec<(String, Vec<(String, usize)>)> = Vec::new();
+        let mut reserved: HashMap<String, usize> = HashMap::new();
 
         for (transition, places) in transition_inputs {
-            let can_fire = places
-                .iter()
-                .all(|(place, cost)| tokens.get(place).copied().unwrap_or(0) >= *cost);
+            let can_fire = places.iter().all(|(place, cost)| {
+                let available = tokens.get(place).copied().unwrap_or(0);
+                let already_reserved = reserved.get(place).copied().unwrap_or(0);
+                available >= already_reserved + *cost
+            });
 
             if can_fire {
+                for (place, cost) in &places {
+                    *reserved.entry(place.clone()).or_insert(0) += *cost;
+                }
                 fire_places.push((transition, places));
             }
         }
