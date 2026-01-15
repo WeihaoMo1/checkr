@@ -1,5 +1,7 @@
 use ce_core::{Env, Generate, ValidationResult, define_env, rand};
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
 use stdx::stringify::Stringify;
@@ -59,11 +61,17 @@ impl Display for PCommand {
                 amount,
                 to_transition,
                 from_transition,
-            } => write!(
-                f,
-                "{from} -> {to} ({amount}) ({to_transition}, {from_transition});"
-            ),
-            PCommand::Token(place, n) => write!(f, "{place}{stars};", stars = "*".repeat(*n)),
+            } => {
+                if *to_transition {
+                    write!(f, "{} -> [{}] ({});", from, to, amount)
+                } else if *from_transition {
+                    write!(f, "[{}] -> {} ({});", from, to, amount)
+                } else {
+                    // This will not happen(just a placeholder)
+                    write!(f, "{} -> {} ({});", from, to, amount)
+                }
+            }
+            PCommand::Token(place, n) => write!(f, "{}{};", place, "*".repeat(*n)),
         }
     }
 }
@@ -123,9 +131,86 @@ impl Env for PetrinetEnv {
 impl Generate for Input {
     type Context = ();
 
-    fn gn<R: rand::Rng>(_cx: &mut Self::Context, _rng: &mut R) -> Self {
+    fn gn<R: rand::Rng>(_cx: &mut Self::Context, rng: &mut R) -> Self {
+        let num_nodes = rng.random_range(3..=6);
+        let places: Vec<String> = ('a'..).take(num_nodes).map(String::from).collect();
+
+        let num_transitions = rng.random_range(2..=4);
+        let transition_names = ["process", "complete", "check", "send", "receive"];
+        let transitions: Vec<String> = transition_names
+            .iter()
+            .take(num_transitions)
+            .map(|s| s.to_string())
+            .collect();
+
+        let mut commands = Vec::new();
+        let mut used_places = HashSet::new();
+
+        for transition in &transitions {
+            let from = places[rng.random_range(0..places.len())].clone();
+            let amount = rng.random_range(1..=3).to_string();
+            used_places.insert(from.clone());
+            commands.push(PCommand::Connection {
+                from,
+                to: transition.clone(),
+                amount,
+                to_transition: true,
+                from_transition: false,
+            });
+        }
+
+        for transition in &transitions {
+            let to = places[rng.random_range(0..places.len())].clone();
+            let amount = rng.random_range(1..=3).to_string();
+            used_places.insert(to.clone());
+            commands.push(PCommand::Connection {
+                from: transition.clone(),
+                to,
+                amount,
+                to_transition: false,
+                from_transition: true,
+            });
+        }
+
+        for _ in 0..rng.random_range(0..=4) {
+            if rng.random_range(0..2) == 0 {
+                let from = places[rng.random_range(0..places.len())].clone();
+                let to = transitions[rng.random_range(0..transitions.len())].clone();
+                let amount = rng.random_range(1..=3).to_string();
+                used_places.insert(from.clone());
+                commands.push(PCommand::Connection {
+                    from,
+                    to,
+                    amount,
+                    to_transition: true,
+                    from_transition: false,
+                });
+            } else {
+                let from = transitions[rng.random_range(0..transitions.len())].clone();
+                let to = places[rng.random_range(0..places.len())].clone();
+                let amount = rng.random_range(1..=3).to_string();
+                used_places.insert(to.clone());
+                commands.push(PCommand::Connection {
+                    from,
+                    to,
+                    amount,
+                    to_transition: false,
+                    from_transition: true,
+                });
+            }
+        }
+
+        let mut places_for_tokens: Vec<String> = used_places.into_iter().collect();
+        places_for_tokens.shuffle(rng);
+
+        let num_tokens = rng.random_range(1..=3.min(places_for_tokens.len()));
+        for place in places_for_tokens.iter().take(num_tokens) {
+            let token_count = rng.random_range(1..=5);
+            commands.push(PCommand::Token(place.clone(), token_count));
+        }
+
         Self {
-            commands: Stringify::new(PCommands(vec![])),
+            commands: Stringify::new(PCommands(commands)),
         }
     }
 }

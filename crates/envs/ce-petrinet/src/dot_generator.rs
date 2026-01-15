@@ -24,6 +24,8 @@ pub fn dot(pcmds: PCommands) -> Result<String, ParseError> {
                         lines.push_str(&format!(
                             "{from:?}[label=\"{from}\",group=\"transition\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\"];\n"
                         ));
+                        valid_places.push(to.clone());
+                        valid_transitions.push(from.clone());
                     } else {
                         return Err(ParseError::new(format!(
                             "Transition '{from}' doesn't have an entry"
@@ -31,7 +33,7 @@ pub fn dot(pcmds: PCommands) -> Result<String, ParseError> {
                     }
                 } else {
                     return Err(ParseError::new(
-                        "Invalid connection: both ends cannot be transitions",
+                        "Invalid connection: both ends cannot be transitions or places",
                     ));
                 }
             }

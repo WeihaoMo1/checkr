@@ -107,7 +107,7 @@ fn parse_connection(
         });
     } else {
         return Err(ParseError::new(format!(
-            "Cannot make connections between two transitions: '{pcmd}'"
+            "Cannot make connections between two places or two transitions: '{pcmd}'"
         )));
     }
 
