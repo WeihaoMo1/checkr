@@ -4,6 +4,13 @@ use std::fmt::Display;
 use std::str::FromStr;
 use stdx::stringify::Stringify;
 
+mod parser;
+use parser::parse_pcommands;
+
+mod dot_generator;
+use dot_generator::dot;
+
+
 define_env!(PetrinetEnv);
 
 #[derive(Debug, Clone)]
@@ -72,127 +79,6 @@ impl Display for PCommands {
     }
 }
 
-pub fn parse_pcommands(src: &str) -> Result<PCommands, ParseError> {
-    let trimmed = src.trim();
-
-    if !trimmed.ends_with(';') {
-        return Err(ParseError::new(format!("Invalid command: '{trimmed}'")));
-    }
-
-    let mut pcmds = Vec::new();
-
-    trimmed
-        .split(';')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .try_for_each(|pcmd| {
-            if let Some((a, rest)) = pcmd.split_once("->") {
-                if a.contains("[") {
-                    let t = a
-                        .trim()
-                        .strip_prefix('[')
-                        .and_then(|s| s.strip_suffix(']'))
-                        .ok_or_else(|| {
-                            ParseError::new(format!("OK Unclosed sqr_bracket in: '{pcmd}'"))
-                        })?
-                        .trim();
-
-                    let (b, brackets) = rest.trim().rsplit_once('(').ok_or_else(|| {
-                        ParseError::new(format!("Expected '()' after target: '{pcmd}'"))
-                    })?;
-
-                    let b = b.trim();
-
-                    let amount = brackets
-                        .strip_suffix(')')
-                        .ok_or_else(|| ParseError::new(format!("Unclosed bracket in: '{pcmd}'")))?
-                        .trim();
-
-                    if b.is_empty()
-                        || amount.is_empty()
-                        || b.contains("->")
-                        || amount.contains("->")
-                    {
-                        return Err(ParseError::new(format!("Invalid connection: '{pcmd}'")));
-                    }
-                    if b.contains("*") || amount.contains("*") {
-                        return Err(ParseError::new(format!(
-                            "Invalid connection syntax: '{pcmd}'"
-                        )));
-                    }
-                    pcmds.push(PCommand::Connection {
-                        from: t.to_string(),
-                        to: b.to_string(),
-                        amount: amount.to_string(),
-                        to_transition: false,
-                        from_transition: true,
-                    });
-                } else {
-                    let a = a.trim();
-
-                    let (sqr_brackets, brackets) =
-                        rest.trim().rsplit_once('(').ok_or_else(|| {
-                            ParseError::new(format!("Expected '()' after target: '{pcmd}'"))
-                        })?;
-
-                    let t = sqr_brackets
-                        .trim()
-                        .strip_prefix('[')
-                        .and_then(|s| s.strip_suffix(']'))
-                        .ok_or_else(|| {
-                            ParseError::new(format!("OK Unclosed sqr_bracket in: '{pcmd}'"))
-                        })?
-                        .trim();
-
-                    let amount = brackets
-                        .strip_suffix(')')
-                        .ok_or_else(|| ParseError::new(format!("Unclosed bracket in: '{pcmd}'")))?
-                        .trim();
-
-                    if a.is_empty()
-                        || amount.is_empty()
-                        || a.contains("->")
-                        || amount.contains("->")
-                    {
-                        return Err(ParseError::new(format!("Invalid connection: '{pcmd}'")));
-                    }
-                    if a.contains("*") || amount.contains("*") {
-                        return Err(ParseError::new(format!(
-                            "Invalid connection syntax: '{pcmd}'"
-                        )));
-                    }
-                    pcmds.push(PCommand::Connection {
-                        from: a.to_string(),
-                        to: t.to_string(),
-                        amount: amount.to_string(),
-                        to_transition: true,
-                        from_transition: false,
-                    });
-                }
-
-                return Ok(());
-            }
-
-            let mut chars = pcmd.chars();
-            let mut place = String::new();
-
-            while let Some(c) = chars.next() {
-                if c.is_alphanumeric() {
-                    place.push(c);
-                } else {
-                    let stars: String = std::iter::once(c).chain(chars).collect();
-                    if !stars.chars().all(|c| c == '*') {
-                        return Err(ParseError::new(format!("Invalid token syntax: '{pcmd}")));
-                    }
-                    pcmds.push(PCommand::Token(place, stars.len()));
-                    return Ok(());
-                }
-            }
-            Err(ParseError::new(format!("Unrecognized command: '{pcmd}'")))
-        })?;
-    Ok(PCommands(pcmds))
-}
-
 impl FromStr for PCommands {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -208,38 +94,6 @@ pub struct Input {
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Output {
     pub dot: String,
-}
-
-pub fn dot(pcmds: PCommands) -> String {
-    let mut lines = String::new();
-    for pcmd in &pcmds.0 {
-        match pcmd {
-            PCommand::Connection {
-                from,
-                to,
-                amount,
-                to_transition,
-                from_transition,
-            } => {
-                if *to_transition && !*from_transition {
-                    lines.push_str(&format!(
-                        "{from:?}[label=\"{from}\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\",group=\"transition\"];\n"
-                    ));
-                } else {
-                    lines.push_str(&format!(
-                        "{from:?}[label=\"{from}\",group=\"transition\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\"];\n"
-                    ));
-                }
-            }
-            PCommand::Token(place, n) => {
-                lines = lines.replace(
-                    &format!("[label=\"{place}\"]"),
-                    &format!("[label=\"{place}{}\"]", "*".repeat(*n)),
-                );
-            }
-        }
-    }
-    format!("digraph G {{\n{}}}", lines)
 }
 
 impl Env for PetrinetEnv {
