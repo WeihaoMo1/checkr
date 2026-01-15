@@ -71,7 +71,7 @@ impl Display for PCommand {
                     write!(f, "{} -> {} ({});", from, to, amount)
                 }
             }
-            PCommand::Token(place, n) => write!(f, "{}{};", place, "*".repeat(*n)),
+            PCommand::Token(place, n) => write!(f, "{} ({});", place, *n),
         }
     }
 }

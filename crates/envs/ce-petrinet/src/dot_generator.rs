@@ -13,24 +13,27 @@ pub fn dot(pcmds: PCommands) -> Result<String, ParseError> {
                 to_transition,
                 from_transition,
             } => {
+                if valid_places.contains(to) && *to_transition
+                    || valid_places.contains(from) && *from_transition
+                    || valid_transitions.contains(from) && *to_transition
+                    || valid_transitions.contains(to) && *from_transition
+                {
+                    return Err(ParseError::new(
+                        "Invalid connection: Transition can not have the same label as a place",
+                    ));
+                }
                 if *to_transition && !*from_transition {
                     lines.push_str(&format!(
-                        "{from:?}[label=\"{from}\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\",group=\"transition\"];\n"
+                        "{from:?}[label=\"{from}\",group=\"place\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\",group=\"transition\"];\n"
                     ));
                     valid_places.push(from.clone());
                     valid_transitions.push(to.clone());
                 } else if !*to_transition && *from_transition {
-                    if valid_transitions.contains(from) {
-                        lines.push_str(&format!(
-                            "{from:?}[label=\"{from}\",group=\"transition\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\"];\n"
+                    lines.push_str(&format!(
+                            "{from:?}[label=\"{from}\",group=\"transition\"]; {from:?} -> {to:?} [label=\"{amount}\"]; {to:?}[label=\"{to}\",group=\"place\"];\n"
                         ));
-                        valid_places.push(to.clone());
-                        valid_transitions.push(from.clone());
-                    } else {
-                        return Err(ParseError::new(format!(
-                            "Transition '{from}' doesn't have an entry"
-                        )));
-                    }
+                    valid_places.push(to.clone());
+                    valid_transitions.push(from.clone());
                 } else {
                     return Err(ParseError::new(
                         "Invalid connection: both ends cannot be transitions or places",
@@ -40,8 +43,8 @@ pub fn dot(pcmds: PCommands) -> Result<String, ParseError> {
             PCommand::Token(place, n) => {
                 if valid_places.contains(place) {
                     lines = lines.replace(
-                        &format!("[label=\"{place}\"]"),
-                        &format!("[label=\"{place}{}\"]", "*".repeat(*n)),
+                        &format!("[label=\"{place}\",group=\"place\"]"),
+                        &format!("[label=\"{place}\n\n{}\",group=\"place\"]", *n),
                     );
                 } else {
                     return Err(ParseError::new(format!(

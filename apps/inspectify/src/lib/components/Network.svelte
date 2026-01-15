@@ -50,10 +50,26 @@
             },
             font: {
               color: 'white',
+              vadjust: -65,
+              align: 'center',
             },
             borderWidth: 1,
-            shape: 'box',
-            size: 30,
+            shape: 'square',
+            size: 20,
+          },
+          place: {
+            color: {
+              background: mirage.ui.fg.hex(),
+              border: mirage.ui.fg.hex(),
+              highlight: mirage.ui.fg.brighten(1).hex(),
+            },
+            font: {
+              color: 'white',
+              vadjust: -70,
+            },
+            borderWidth: 1,
+            shape: 'dot',
+            size: 22,
           },
         },
         edges: {

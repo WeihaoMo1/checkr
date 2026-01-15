@@ -3,33 +3,33 @@ use super::PCommands;
 use crate::ParseError;
 
 pub trait PetrinetParsing {
-    fn extract_transition(&self, pcmd: &str) -> Result<&str, ParseError>;
-    fn extract_amount(&self, pcmd: &str) -> Result<&str, ParseError>;
-    fn separate_target_and_amount(&self, pcmd: &str) -> Result<(&str, &str), ParseError>;
+    fn extract_transition(&self) -> Result<&str, ParseError>;
+    fn extract_amount(&self) -> Result<&str, ParseError>;
+    fn separate_target_and_amount(&self) -> Result<(&str, &str), ParseError>;
 }
 
 impl PetrinetParsing for &str {
-    fn extract_transition(&self, pcmd: &str) -> Result<&str, ParseError> {
+    fn extract_transition(&self) -> Result<&str, ParseError> {
         let transition = self
             .trim()
             .strip_prefix('[')
             .and_then(|s| s.strip_suffix(']'))
-            .ok_or_else(|| ParseError::new(format!("Unclosed sqr_bracket in: '{pcmd}'")))?;
+            .ok_or_else(|| ParseError::new(format!("Unclosed sqr_bracket in: '{self}'")))?;
         Ok(transition.trim())
     }
 
-    fn extract_amount(&self, pcmd: &str) -> Result<&str, ParseError> {
+    fn extract_amount(&self) -> Result<&str, ParseError> {
         let amount = self
             .strip_suffix(')')
-            .ok_or_else(|| ParseError::new(format!("Unclosed bracket in: '{pcmd}'")))?;
+            .ok_or_else(|| ParseError::new(format!("Unclosed bracket in: '{self}'")))?;
         Ok(amount.trim())
     }
 
-    fn separate_target_and_amount(&self, pcmd: &str) -> Result<(&str, &str), ParseError> {
+    fn separate_target_and_amount(&self) -> Result<(&str, &str), ParseError> {
         let (target, amount) = self
             .trim()
             .rsplit_once('(')
-            .ok_or_else(|| ParseError::new(format!("Expected '()' after target: '{pcmd}'")))?;
+            .ok_or_else(|| ParseError::new(format!("Expected '()' after target: '{self}'")))?;
         Ok((target, amount))
     }
 }
@@ -76,9 +76,9 @@ fn parse_connection(
     pcmds: &mut Vec<PCommand>,
 ) -> Result<(), ParseError> {
     if from_part.contains("[") && !to_part.contains("[") {
-        let from = from_part.extract_transition(pcmd)?;
-        let (target, amount) = to_part.separate_target_and_amount(pcmd)?;
-        let amount = amount.extract_amount(pcmd)?;
+        let from = from_part.extract_transition()?;
+        let (target, amount) = to_part.separate_target_and_amount()?;
+        let amount = amount.extract_amount()?;
         let target = target.trim();
 
         check_syntax(target, amount, pcmd)?;
@@ -92,9 +92,9 @@ fn parse_connection(
         });
     } else if to_part.contains("[") && !from_part.contains("[") {
         let from = from_part.trim();
-        let (target, amount) = to_part.separate_target_and_amount(pcmd)?;
-        let target = target.extract_transition(pcmd)?;
-        let amount = amount.extract_amount(pcmd)?;
+        let (target, amount) = to_part.separate_target_and_amount()?;
+        let target = target.extract_transition()?;
+        let amount = amount.extract_amount()?;
 
         check_syntax(target, amount, pcmd)?;
 
@@ -115,21 +115,16 @@ fn parse_connection(
 }
 
 fn parse_token(pcmd: &str, pcmds: &mut Vec<PCommand>) -> Result<(), ParseError> {
-    let mut chars = pcmd.chars();
-    let mut place = String::new();
-
-    while let Some(c) = chars.next() {
-        if c.is_alphanumeric() {
-            place.push(c);
-        } else {
-            let stars: String = std::iter::once(c).chain(chars).collect();
-            if !stars.chars().all(|c| c == '*') {
-                return Err(ParseError::new(format!("Invalid token syntax: '{pcmd}'")));
-            }
-            pcmds.push(PCommand::Token(place, stars.len()));
-            return Ok(());
-        }
+    let (place,amount) = pcmd.separate_target_and_amount()?;
+    let place = place.trim();
+    let amount = amount.extract_amount()?;
+    if place.is_empty() {
+        return Err(ParseError::new(format!("No place found: '{pcmd}'")));
     }
+    if amount.parse::<usize>().is_err() {
+        return Err(ParseError::new(format!("Token amount must be a number: '{pcmd}'")));
+    }
+    pcmds.push(PCommand::Token(place.to_string(), amount.parse::<usize>().unwrap()));
 
-    Err(ParseError::new(format!("Unrecognized command: '{pcmd}'")))
+    Ok(())
 }
