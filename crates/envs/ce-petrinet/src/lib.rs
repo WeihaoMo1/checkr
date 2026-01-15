@@ -3,13 +3,14 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 use stdx::stringify::Stringify;
+use std::error::Error;
+use std::fmt;
 
 mod parser;
 use parser::parse_pcommands;
 
 mod dot_generator;
 use dot_generator::dot;
-
 
 define_env!(PetrinetEnv);
 
@@ -25,9 +26,6 @@ impl ParseError {
         }
     }
 }
-
-use std::error::Error;
-use std::fmt;
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -98,9 +96,7 @@ pub struct Output {
 
 impl Env for PetrinetEnv {
     type Input = Input;
-
     type Output = Output;
-
     type Meta = ();
 
     fn run(input: &Self::Input) -> ce_core::Result<Self::Output> {
@@ -112,7 +108,11 @@ impl Env for PetrinetEnv {
                     "failed to parse commands",
                 ))?;
 
-        Ok(Output { dot: dot(parsed) })
+        let dot_str = dot(parsed).map_err(ce_core::EnvError::invalid_input_for_program(
+            "failed to generate DOT",
+        ))?;
+
+        Ok(Output { dot: dot_str })
     }
 
     fn validate(_input: &Self::Input, _output: &Self::Output) -> ce_core::Result<ValidationResult> {
