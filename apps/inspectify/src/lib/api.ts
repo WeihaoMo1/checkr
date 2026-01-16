@@ -224,7 +224,8 @@ export namespace ce_petrinet {
     steps: number
   };
   export type Output = {
-    dot: string
+    dot: string,
+    map: Record<string, number>[]
   };
 }
 export namespace ce_playground {

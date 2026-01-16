@@ -1,7 +1,7 @@
 use ce_core::{Env, Generate, ValidationResult, define_env, rand};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::str::FromStr;
 use stdx::stringify::Stringify;
@@ -104,6 +104,7 @@ pub struct Input {
 #[derive(tapi::Tapi, Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Output {
     pub dot: String,
+    pub map: Vec<HashMap<String, usize>>,
 }
 
 impl Env for PetrinetEnv {
@@ -120,13 +121,16 @@ impl Env for PetrinetEnv {
                     "failed to parse commands",
                 ))?;
 
-        let steps = steps(parsed, input.steps);
+        let (map,steps) = steps(parsed, input.steps);
 
         let dot_str = dot(steps).map_err(ce_core::EnvError::invalid_input_for_program(
             "failed to generate DOT",
         ))?;
 
-        Ok(Output { dot: dot_str })
+        Ok(Output { 
+            dot: dot_str,
+            map,
+        })
     }
 
     fn validate(_input: &Self::Input, _output: &Self::Output) -> ce_core::Result<ValidationResult> {
