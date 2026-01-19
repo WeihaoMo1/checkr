@@ -63,17 +63,12 @@ pub fn steps(pcmds: PCommands, steps: usize) -> (Vec<HashMap<String, usize>>, PC
     let pcmds = pcmds.clone();
     let mut iterations: Vec<HashMap<String, usize>> = Vec::new();
 
-    let mut tokens: HashMap<String, usize> = pcmds
-        .0
-        .iter()
-        .filter_map(|pcmd| {
-            if let PCommand::Token(place, amount) = pcmd {
-                Some((place.clone(), *amount))
-            } else {
-                None
-            }
-        })
-        .collect();
+    let mut tokens: HashMap<String, usize> = HashMap::new();
+    for pcmd in &pcmds.0 {
+        if let PCommand::Token(place, amount) = pcmd {
+            *tokens.entry(place.clone()).or_insert(0) += *amount;
+        }
+    }
 
     let (_, _, places) = get_maps(pcmds.clone());
 

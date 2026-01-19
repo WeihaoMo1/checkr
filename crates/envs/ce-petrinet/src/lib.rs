@@ -2,11 +2,11 @@ use ce_core::{Env, Generate, ValidationResult, define_env, rand};
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::fmt;
 use std::fmt::Display;
 use std::str::FromStr;
 use stdx::stringify::Stringify;
-use std::error::Error;
-use std::fmt;
 
 mod parser;
 use parser::parse_pcommands;
@@ -121,20 +121,25 @@ impl Env for PetrinetEnv {
                     "failed to parse commands",
                 ))?;
 
-        let (map,steps) = steps(parsed, input.steps);
+        let (map, steps) = steps(parsed, input.steps);
 
         let dot_str = dot(steps).map_err(ce_core::EnvError::invalid_input_for_program(
             "failed to generate DOT",
         ))?;
 
-        Ok(Output { 
-            dot: dot_str,
-            map,
-        })
+        Ok(Output { dot: dot_str, map })
     }
 
-    fn validate(_input: &Self::Input, _output: &Self::Output) -> ce_core::Result<ValidationResult> {
-        Ok(ValidationResult::Correct)
+    fn validate(input: &Self::Input, output: &Self::Output) -> ce_core::Result<ValidationResult> {
+        let reference = Self::run(input);
+
+        if reference.unwrap().map[0] == output.map[0] {
+            Ok(ValidationResult::Correct)
+        } else {
+            Ok(ValidationResult::Mismatch {
+                reason: "Initial state mismatch".to_string(),
+            })
+        }
     }
 }
 
